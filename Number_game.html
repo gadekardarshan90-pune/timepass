@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-black text-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Number Guessing Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+  <main class="w-full max-w-md p-6 rounded-lg border border-white space-y-5">
+    <header>
+      <h1 class="text-2xl font-bold text-center">🎯 Number Guessing Game</h1>
+      <p class="text-center text-sm text-gray-400">Guess a number between 1 and 100</p>
+    </header>
+
+    <form id="guessForm" class="flex space-x-2" autocomplete="off">
+      <label for="guessInput" class="sr-only">Your Guess</label>
+      <input id="guessInput" type="number" inputmode="numeric" min="1" max="100"
+             placeholder="Enter your guess"
+             class="flex-1 px-4 py-2 bg-black border border-white text-white rounded focus:outline-none focus:ring-2 focus:ring-white"/>
+      <button type="submit"
+              class="px-4 py-2 bg-white text-black font-semibold rounded hover:bg-gray-200">Guess</button>
+    </form>
+
+    <div id="feedback" class="text-center text-lg font-medium min-h-[1.5rem] transition-opacity duration-200"></div>
+
+    <section>
+      <h2 class="font-semibold mb-1">🕓 Guess History</h2>
+      <ul id="historyList" class="list-disc list-inside text-sm space-y-1 text-gray-300 max-h-40 overflow-auto"></ul>
+    </section>
+
+    <div class="flex flex-col space-y-2">
+      <button onclick="autoBestGuess()"
+              class="w-full px-4 py-2 bg-white text-black font-semibold rounded hover:bg-gray-200">
+        🤖 Best Case Auto Guess
+      </button>
+
+      <button onclick="resetGame()"
+              class="w-full px-4 py-2 bg-white text-black font-semibold rounded hover:bg-gray-200">
+        🔁 Reset Game
+      </button>
+    </div>
+  </main>
+
+  <script>
+    const guessForm = document.getElementById("guessForm");
+    const guessInput = document.getElementById("guessInput");
+    const feedback = document.getElementById("feedback");
+    const historyList = document.getElementById("historyList");
+
+    let secretNumber;
+    let guessHistory = [];
+
+    // Initialize
+    function init() {
+      secretNumber = generateNumber();
+      guessHistory = getHistory();
+      renderHistory();
+      feedback.textContent = "";
+      guessInput.focus();
+    }
+
+    function generateNumber() {
+      return Math.floor(Math.random() * 100) + 1;
+    }
+
+    function getHistory() {
+      return JSON.parse(localStorage.getItem("guessHistory")) || [];
+    }
+
+    function saveHistory() {
+      localStorage.setItem("guessHistory", JSON.stringify(guessHistory));
+    }
+
+    function renderHistory() {
+      historyList.innerHTML = "";
+      guessHistory.forEach((guess, index) => {
+        const li = document.createElement("li");
+        li.textContent = `#${index + 1}: ${guess}`;
+        historyList.appendChild(li);
+      });
+    }
+
+    function showFeedback(message, success = false) {
+      feedback.textContent = message;
+      feedback.classList.remove("text-green-400", "text-red-400", "text-yellow-400");
+      feedback.classList.add(success ? "text-green-400" : "text-yellow-400");
+    }
+
+    guessForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const guess = parseInt(guessInput.value);
+
+      if (isNaN(guess) || guess < 1 || guess > 100) {
+        showFeedback("⚠️ Enter a number between 1 and 100", false);
+        return;
+      }
+
+      guessHistory.push(guess);
+      saveHistory();
+      renderHistory();
+
+      if (guess === secretNumber) {
+        showFeedback("🎉 Correct! You guessed it!", true);
+      } else if (guess < secretNumber) {
+        showFeedback("📉 Too low. Try again!", false);
+      } else {
+        showFeedback("📈 Too high. Try again!", false);
+      }
+
+      guessInput.value = "";
+      guessInput.focus();
+    });
+
+    function resetGame() {
+      secretNumber = generateNumber();
+      guessHistory = [];
+      saveHistory();
+      renderHistory();
+      showFeedback("");
+      guessInput.value = "";
+      guessInput.focus();
+    }
+
+    // ✅ Auto Best Guess using Binary Search
+    async function autoBestGuess() {
+      let low = 1;
+      let high = 100;
+
+      guessHistory = [];
+      saveHistory();
+      renderHistory();
+      feedback.textContent = "";
+
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        guessHistory.push(mid);
+        saveHistory();
+        renderHistory();
+
+        await delay(600); // short pause to simulate step-by-step guessing
+
+        if (mid === secretNumber) {
+          showFeedback(`🤖 Found it! The number is ${mid}`, true);
+          break;
+        } else if (mid < secretNumber) {
+          showFeedback(`🤖 ${mid} is too low...`, false);
+          low = mid + 1;
+        } else {
+          showFeedback(`🤖 ${mid} is too high...`, false);
+          high = mid - 1;
+        }
+      }
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>
